@@ -73,6 +73,16 @@ h1 em{font-style:normal;color:var(--threat)}
 .cta:active{transform:translateY(3px);box-shadow:0 1px 0 #3a58b0}
 .best{margin:14px 0 0;text-align:center;color:var(--muted);font:400 .85rem/1 var(--f-mono)}
 
+.pace{margin:0 0 22px}
+.pace .lbl{margin-bottom:8px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg button{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 6px;font:600 .85rem/1.2 var(--f-display);letter-spacing:.04em;color:var(--muted);text-align:center}
+.seg button small{display:block;font:400 .7rem/1.3 var(--f-mono);margin-top:4px}
+.seg button[aria-pressed="true"]{border-color:var(--accent);color:var(--fg);background:var(--panel-2)}
+.card.paused{filter:blur(8px);pointer-events:none}
+.hint{margin:0;color:var(--muted);font:400 .8rem/1.4 var(--f-mono)}
+.top-actions{display:flex;gap:8px}
+
 /* play */
 .hud{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:10px}
 .hud-cell{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
@@ -161,7 +171,7 @@ h1 em{font-style:normal;color:var(--threat)}
       <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 4 7v8c0 7.5 5 13 12 15 7-2 12-7.500 12-15V7L16 2Z" fill="none" stroke="#6b93ff" stroke-width="2"/><path d="m10.500 16 4 4 7-8" fill="none" stroke="#46e2a4" stroke-width="2.500" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Cyber Defenders
     </div>
-    <button class="ghost" id="mute" type="button">Sound on</button>
+    <div class="top-actions"><button class="ghost" id="pause" type="button" hidden>Pause</button><button class="ghost" id="mute" type="button">Sound on</button></div>
   </header>
 
   <section id="s-start">
@@ -175,6 +185,14 @@ h1 em{font-style:normal;color:var(--threat)}
     </ul>
     <p class="lead" style="margin-bottom:12px">On a phone: swipe the card left to block, right to allow.</p>
     <div class="levels"><span>Level 1 &middot; Rookie</span><span>Level 2 &middot; Analyst</span><span>Level 3 &middot; Defender</span></div>
+    <div class="pace"><span class="lbl">Pace: how long you get per message</span>
+      <div class="seg" id="pace" role="group" aria-label="Pace">
+        <button type="button" data-pace="relaxed" aria-pressed="true">Relaxed<small>25 / 20 / 15 s</small></button>
+        <button type="button" data-pace="standard" aria-pressed="false">Standard<small>15 / 12 / 10 s</small></button>
+        <button type="button" data-pace="fast" aria-pressed="false">Fast<small>10 / 7.5 / 6 s</small></button>
+      </div>
+      <p class="hint" style="margin-top:10px">No rush between messages. You can pause any time with P, and the explanation waits until you press Next.</p>
+    </div>
     <button class="cta" id="start" type="button">Start shift</button>
     <p class="best" id="best"></p>
   </section>
@@ -265,7 +283,10 @@ S(2,'dm','Dan','Saved contact','','Join my lobby, code 4421',null,0,['A friend y
 S(2,'app','Parcelly','App notification','','Your driver is 3 stops away.',null,0,['A notification from the real app you installed.'],{ctx:'You are waiting for a delivery today.'})
 ];
 
-var TIERS=[{name:'Level 1 · Rookie',time:10},{name:'Level 2 · Analyst',time:7.5},{name:'Level 3 · Defender',time:6}];
+var TIERS=[{name:'Level 1 · Rookie'},{name:'Level 2 · Analyst'},{name:'Level 3 · Defender'}];
+var PACES={relaxed:[25,20,15],standard:[15,12,10],fast:[10,7.5,6]};
+var pace='relaxed';
+try{var sp=localStorage.getItem('cd-pace');if(sp&&PACES[sp])pace=sp}catch(e){}
 var PER=8,TOTAL=24,SCANS=3;
 var CH={email:'Email',sms:'SMS',dm:'Direct message',app:'App'};
 var st=null,scr='start',muted=false,last=0,fbTimer=0,audio=null,best=0;
@@ -284,6 +305,7 @@ function buildRun(){
 
 function show(name){
   scr=name;
+  $('#pause').hidden=(name!=='play');
   ['start','play','end'].forEach(function(n){$('#s-'+n).hidden=(n!==name)});
   window.scrollTo(0,0);
 }
@@ -310,14 +332,15 @@ function mult(){return 1+Math.min(4,Math.floor(st.combo/3))}
 
 function start(){
   clearTimeout(fbTimer);
-  st={order:buildRun(),i:0,score:0,combo:0,bestCombo:0,hp:100,scans:SCANS,right:0,done:0,missed:[],rem:0,limit:0,locked:true,inspected:false};
+  st={order:buildRun(),i:0,score:0,combo:0,bestCombo:0,hp:100,scans:SCANS,right:0,done:0,missed:[],rem:0,limit:0,locked:true,inspected:false,paused:false};
+  $('#pause').textContent='Pause';
   show('play');
   loadCard();
 }
 
 function loadCard(){
-  var s=cur(),tier=TIERS[s.t];
-  st.limit=tier.time;st.rem=tier.time;st.locked=false;st.inspected=false;
+  var s=cur(),lim=PACES[pace][s.t];
+  st.limit=lim;st.rem=lim;st.locked=false;st.inspected=false;
   $('#fb').innerHTML='';
   var card=$('#card');
   card.style.animation='none';void card.offsetWidth;card.style.animation='';
@@ -346,11 +369,11 @@ function hud(){
   $('#score').textContent=st.score;
   $('#streak').textContent='x'+mult();
   var b=$('#btn-scan');
-  var can=st.scans>0&&!st.inspected&&!st.locked&&(s.link||s.att);
+  var can=st.scans>0&&!st.inspected&&!st.locked&&!st.paused&&(s.link||s.att);
   b.disabled=!can;
   b.textContent=(!s.link&&!s.att)?'Nothing to inspect here':'Inspect link ('+st.scans+' left, press I)';
-  $('#btn-block').disabled=st.locked;
-  $('#btn-allow').disabled=st.locked;
+  $('#btn-block').disabled=st.locked||st.paused;
+  $('#btn-allow').disabled=st.locked||st.paused;
 }
 
 function timerUi(){
@@ -360,7 +383,7 @@ function timerUi(){
 }
 
 function inspect(){
-  if(!st||scr!=='play'||st.locked||st.inspected||st.scans<=0)return;
+  if(!st||scr!=='play'||st.locked||st.paused||st.inspected||st.scans<=0)return;
   var s=cur();if(!s.link&&!s.att)return;
   st.inspected=true;st.scans--;st.rem=Math.max(.5,st.rem-1.5);
   var h='<div><span>Sender</span>'+esc(s.addr)+'</div>';
@@ -371,13 +394,13 @@ function inspect(){
 }
 
 function answer(choice){
-  if(!st||scr!=='play'||st.locked)return;
+  if(!st||scr!=='play'||st.locked||st.paused)return;
   st.locked=true;st.done++;
   var s=cur(),ok=false,head,pts='';
   if(choice!==null)ok=((choice==='block')===!!s.ph);
   if(ok){
     st.combo++;st.bestCombo=Math.max(st.bestCombo,st.combo);
-    var p=100*mult()+Math.round(st.rem*5);
+    var p=100*mult()+Math.round(st.rem/st.limit*50);
     st.score+=p;st.right++;st.hp=Math.min(100,st.hp+3);
     head=s.ph?'Threat blocked':'Safe message allowed';
     pts='+'+p+' points';sfxOk();
@@ -389,11 +412,11 @@ function answer(choice){
     sfxBad();
   }
   var last=(st.hp<=0||st.i+1>=TOTAL);
-  var fb='<div class="fb '+(ok?'ok':'bad')+'"><h2>'+head+'</h2><div class="pts">'+pts+'</div><ul>'+s.why.map(function(w){return '<li>'+esc(w)+'</li>'}).join('')+'</ul><button class="go" id="next" type="button">'+(last?'See results':'Next message')+'</button></div>';
+  var fb='<div class="fb '+(ok?'ok':'bad')+'"><h2>'+head+'</h2><div class="pts">'+pts+'</div><ul>'+s.why.map(function(w){return '<li>'+esc(w)+'</li>'}).join('')+'</ul><p class="hint">Take your time. Continue when you are ready.</p><button class="go" id="next" type="button">'+(last?'See results':'Next message')+'</button></div>';
   $('#fb').innerHTML=fb;
   $('#next').addEventListener('click',next);
   hud();timerUi();
-  if(ok&&!last)fbTimer=setTimeout(next,2800);
+  try{$('#next').focus({preventScroll:true})}catch(e){$('#next').focus()}
 }
 
 function next(){
@@ -432,7 +455,7 @@ function finish(){
 /* swipe */
 var drag=null,card=$('#card');
 card.addEventListener('pointerdown',function(e){
-  if(!st||scr!=='play'||st.locked||e.target.closest('button'))return;
+  if(!st||scr!=='play'||st.locked||st.paused||e.target.closest('button'))return;
   drag={x:e.clientX};try{card.setPointerCapture(e.pointerId)}catch(x){}
   card.classList.add('dragging');
 });
@@ -448,6 +471,19 @@ function endDrag(e){
 }
 card.addEventListener('pointerup',endDrag);
 card.addEventListener('pointercancel',endDrag);
+
+/* pause and pace */
+function togglePause(){
+  if(!st||scr!=='play'||st.locked)return;
+  st.paused=!st.paused;
+  $('#pause').textContent=st.paused?'Resume':'Pause';
+  $('#card').classList.toggle('paused',st.paused);
+  hud();
+}
+function paintPace(){[].forEach.call(document.querySelectorAll('#pace button'),function(b){b.setAttribute('aria-pressed',b.getAttribute('data-pace')===pace?'true':'false')})}
+[].forEach.call(document.querySelectorAll('#pace button'),function(b){b.addEventListener('click',function(){pace=b.getAttribute('data-pace');try{localStorage.setItem('cd-pace',pace)}catch(e){}paintPace()})});
+paintPace();
+$('#pause').addEventListener('click',togglePause);
 
 /* controls */
 $('#start').addEventListener('click',start);
@@ -465,6 +501,7 @@ document.addEventListener('keydown',function(e){
     return;
   }
   if(scr!=='play')return;
+  if(k==='p'){togglePause();return}
   if(k==='arrowleft'||k==='a'){e.preventDefault();answer('block')}
   else if(k==='arrowright'||k==='d'){e.preventDefault();answer('allow')}
   else if(k==='i'){inspect()}
@@ -474,7 +511,7 @@ document.addEventListener('keydown',function(e){
 function tick(t){
   requestAnimationFrame(tick);
   var dt=Math.min(.1,(t-last)/1000);last=t;
-  if(!st||scr!=='play'||st.locked)return;
+  if(!st||scr!=='play'||st.locked||st.paused)return;
   st.rem-=dt;timerUi();
   if(st.rem<=0){st.rem=0;answer(null)}
 }
