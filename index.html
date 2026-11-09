@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Cyber Defenders: Phish or Legit? A fast game that teaches you to spot scam messages.">
+<meta name="theme-color" content="#0a0f1f">
+<meta property="og:title" content="Cyber Defenders: Phish or Legit?">
+<meta property="og:description" content="Block the scams, allow the real messages, keep your system alive.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 7v8c0 7.5 5 13 12 15 7-2 12-7.5 12-15V7L16 2Z' fill='%230a0f1f' stroke='%236b93ff' stroke-width='2'/%3E%3Cpath d='m10.5 16 4 4 7-8' fill='none' stroke='%2346e2a4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>html{color-scheme:dark;background:#0a0f1f;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>Cyber Defenders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600&display=swap">
+<style>
+:root{
+  /* Layout: one centred game column. HUD on top, the incoming message as a phone-style card in the middle, two big verdict buttons at the foot. Single dark look by choice. */
+  --bg:#0a0f1f;
+  --panel:#111a33;
+  --panel-2:#17234d;
+  --line:#26335f;
+  --fg:#e8edff;
+  --muted:#93a0c9;
+  --threat:#ff5d6c;
+  --safe:#46e2a4;
+  --accent:#6b93ff;
+  --f-display:'Chakra Petch',system-ui,sans-serif;
+  --f-body:'Outfit',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font:400 16px/1.5 var(--f-body);
+  padding-block:16px 32px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  min-height:100%;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 10%,transparent 75%);
+  mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 10%,transparent 75%);
+}
+.app{position:relative;max-width:640px;margin:0 auto}
+.mono{font-family:var(--f-mono)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:10px;font:700 .95rem/1 var(--f-display);letter-spacing:.16em;text-transform:uppercase}
+.brand svg{width:26px;height:26px;flex:none}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:8px;padding:6px 12px;font:500 .78rem/1 var(--f-mono);color:var(--muted)}
+.ghost:hover{border-color:var(--accent);color:var(--fg)}
+
+/* start */
+.eyebrow{font:500 .78rem/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(2.4rem,9vw,3.6rem)/1 var(--f-display);margin:10px 0 14px;letter-spacing:-.01em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--threat)}
+.lead{color:var(--muted);font-size:1.08rem;max-width:46ch;margin:0 0 22px}
+.rules{display:grid;gap:10px;margin:0 0 22px;padding:0;list-style:none}
+.rules li{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.key{flex:none;min-width:42px;text-align:center;font:500 .85rem/1 var(--f-mono);padding:8px 10px;border-radius:8px;border:1px solid var(--line);border-bottom-width:3px;background:var(--panel-2)}
+.rules b{display:block;font-weight:600}
+.rules span{color:var(--muted);font-size:.92rem}
+.levels{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px}
+.levels span{font:500 .78rem/1 var(--f-mono);padding:8px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
+.cta{width:100%;border:0;border-radius:12px;padding:16px;background:var(--accent);color:#06102e;font:700 1.1rem/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase;box-shadow:0 4px 0 #3a58b0}
+.cta:active{transform:translateY(3px);box-shadow:0 1px 0 #3a58b0}
+.best{margin:14px 0 0;text-align:center;color:var(--muted);font:400 .85rem/1 var(--f-mono)}
+
+/* play */
+.hud{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:10px}
+.hud-cell{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.lbl{display:block;font:500 .66rem/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.hud-cell b{font:500 1.1rem/1 var(--f-mono);font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:99px;background:#0a1230;overflow:hidden;margin-bottom:6px}
+.bar i{display:block;height:100%;width:100%;background:var(--safe);border-radius:99px;transition:width .35s,background .35s}
+.bar.low i{background:var(--threat)}
+.lvl{display:flex;justify-content:space-between;align-items:baseline;margin:14px 2px 8px;font:600 .9rem/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
+.lvl .mono{font-weight:400;color:var(--muted);font-size:.8rem}
+.lvl.flash{animation:flash 1s}
+@keyframes flash{0%,60%{color:var(--accent)}100%{color:inherit}}
+.timer{height:6px;background:#0a1230;border-radius:99px;overflow:hidden;margin-bottom:14px}
+.timer i{display:block;height:100%;width:100%;transform-origin:left;background:var(--accent)}
+.timer.hot i{background:var(--threat)}
+
+.stage{position:relative;min-height:300px}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;
+  touch-action:pan-y;user-select:none;-webkit-user-select:none;
+  animation:in .28s ease-out;transition:border-color .15s,box-shadow .15s;
+}
+.card.dragging{transition:none;cursor:grabbing}
+.card[data-lean="block"]{border-color:var(--threat);box-shadow:0 0 0 3px rgba(255,93,108,.2)}
+.card[data-lean="allow"]{border-color:var(--safe);box-shadow:0 0 0 3px rgba(70,226,164,.2)}
+@keyframes in{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.c-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.chip{font:500 .68rem/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 8px;border-radius:6px;background:var(--panel-2);color:var(--accent)}
+.c-from{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.c-addr{color:var(--muted);font-size:.8rem;margin-bottom:12px;overflow-wrap:anywhere}
+.c-subj{font:600 1.15rem/1.25 var(--f-display);margin:0 0 8px;text-wrap:balance}
+.c-body{margin:0 0 12px;overflow-wrap:anywhere}
+.c-link,.c-att{display:inline-block;max-width:100%;font-size:.85rem;padding:7px 10px;border-radius:8px;background:#0a1230;overflow-wrap:anywhere}
+.c-link{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.c-att{color:var(--fg);margin-left:6px}
+.c-ctx{margin:12px 0 0;padding-left:10px;border-left:2px solid var(--line);color:var(--muted);font-size:.9rem}
+.scan{margin-top:14px;padding:10px 12px;border:1px dashed var(--accent);border-radius:10px;background:#0a1230;font:400 .78rem/1.6 var(--f-mono);overflow-wrap:anywhere}
+.scan span{display:block;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;font-size:.66rem}
+.scan div+div{margin-top:6px}
+
+.fb{position:absolute;inset:0;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px;background:rgba(10,15,31,.97);border:2px solid var(--line);animation:in .2s ease-out;overflow:auto}
+.fb.ok{border-color:var(--safe)}
+.fb.bad{border-color:var(--threat)}
+.fb h2{margin:0;font:700 1.35rem/1.15 var(--f-display);text-wrap:balance}
+.fb.ok h2{color:var(--safe)}
+.fb.bad h2{color:var(--threat)}
+.fb .pts{font:500 .85rem/1 var(--f-mono);color:var(--muted)}
+.fb ul{margin:0;padding-left:1.1em;display:grid;gap:6px}
+.fb .go{margin-top:auto;align-self:flex-start;border:1px solid var(--line);background:var(--panel-2);border-radius:10px;padding:10px 16px;font:600 .85rem/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
+
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.verdict{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;border-radius:14px;border:2px solid;background:var(--panel);font:700 1.15rem/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
+.verdict small{font:500 .72rem/1 var(--f-mono);letter-spacing:.04em;opacity:.8;text-transform:none}
+.verdict.block{border-color:var(--threat);color:var(--threat)}
+.verdict.block:hover{background:var(--threat);color:#2a0409}
+.verdict.allow{border-color:var(--safe);color:var(--safe)}
+.verdict.allow:hover{background:var(--safe);color:#04271a}
+.verdict:active{transform:translateY(2px)}
+.verdict:disabled,.scanbtn:disabled{opacity:.4;cursor:not-allowed}
+.scanbtn{width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--line);background:transparent;font:500 .85rem/1 var(--f-mono);color:var(--muted)}
+.scanbtn:not(:disabled):hover{border-color:var(--accent);color:var(--fg)}
+
+/* end */
+.rank{font:700 clamp(2.2rem,8vw,3.2rem)/1 var(--f-display);margin:8px 0 10px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:18px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font:500 1.6rem/1 var(--f-mono);margin-top:8px;font-variant-numeric:tabular-nums}
+.missed h3{font:600 .9rem/1 var(--f-display);letter-spacing:.1em;text-transform:uppercase;margin:22px 0 10px;color:var(--muted)}
+.missed ul{list-style:none;margin:0 0 22px;padding:0;display:grid;gap:8px}
+.missed li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.92rem;overflow-wrap:anywhere}
+.missed li b{display:block}
+.missed li span{color:var(--muted)}
+
+@media (max-width:420px){
+  .hud{grid-template-columns:1fr 1fr}
+  .hud-cell.wide{grid-column:1/-1}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 4 7v8c0 7.5 5 13 12 15 7-2 12-7.500 12-15V7L16 2Z" fill="none" stroke="#6b93ff" stroke-width="2"/><path d="m10.500 16 4 4 7-8" fill="none" stroke="#46e2a4" stroke-width="2.500" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Cyber Defenders
+    </div>
+    <button class="ghost" id="mute" type="button">Sound on</button>
+  </header>
+
+  <section id="s-start">
+    <div class="eyebrow">Phish or Legit?</div>
+    <h1>Spot the <em>phish</em> before it spots you.</h1>
+    <p class="lead">Messages hit your inbox, your texts and your DMs. Block the scams, let the real ones through, and keep your system alive for 24 messages.</p>
+    <ul class="rules">
+      <li><span class="key">&larr; / A</span><div><b>Block phishing</b><span>Fake, dodgy or pushing you to hand something over.</span></div></li>
+      <li><span class="key">&rarr; / D</span><div><b>Allow real messages</b><span>Safe, expected and nothing to worry about.</span></div></li>
+      <li><span class="key">I</span><div><b>Inspect</b><span>Reveals where a link really goes. 3 scans per shift, costs 1.5 seconds.</span></div></li>
+    </ul>
+    <p class="lead" style="margin-bottom:12px">On a phone: swipe the card left to block, right to allow.</p>
+    <div class="levels"><span>Level 1 &middot; Rookie</span><span>Level 2 &middot; Analyst</span><span>Level 3 &middot; Defender</span></div>
+    <button class="cta" id="start" type="button">Start shift</button>
+    <p class="best" id="best"></p>
+  </section>
+
+  <section id="s-play" hidden>
+    <div class="hud">
+      <div class="hud-cell wide"><span class="lbl">System integrity</span><div class="bar" id="hp-bar"><i id="hp-fill"></i></div><b id="hp-num">100%</b></div>
+      <div class="hud-cell"><span class="lbl">Score</span><b id="score">0</b></div>
+      <div class="hud-cell"><span class="lbl">Streak</span><b id="streak">x1</b></div>
+    </div>
+    <div class="lvl" id="lvl"><span id="lvl-name">Level 1 &middot; Rookie</span><span class="mono" id="prog">1 / 24</span></div>
+    <div class="timer" id="timer"><i id="timer-fill"></i></div>
+    <div class="stage">
+      <div class="card" id="card" aria-live="polite"></div>
+      <div id="fb"></div>
+    </div>
+    <div class="controls">
+      <button class="verdict block" id="btn-block" type="button">Block<small>&larr; or A</small></button>
+      <button class="verdict allow" id="btn-allow" type="button">Allow<small>&rarr; or D</small></button>
+    </div>
+    <button class="scanbtn" id="btn-scan" type="button">Inspect link</button>
+  </section>
+
+  <section id="s-end" hidden>
+    <div class="eyebrow" id="end-eyebrow">Shift over</div>
+    <div class="rank" id="rank"></div>
+    <p class="lead" id="rank-msg"></p>
+    <div class="stats">
+      <div class="stat"><span class="lbl">Score</span><b id="e-score"></b></div>
+      <div class="stat"><span class="lbl">Accuracy</span><b id="e-acc"></b></div>
+      <div class="stat"><span class="lbl">Best streak</span><b id="e-streak"></b></div>
+      <div class="stat"><span class="lbl">Messages</span><b id="e-done"></b></div>
+    </div>
+    <div class="missed" id="missed"></div>
+    <button class="cta" id="again" type="button">Play again</button>
+    <p class="best" id="best2"></p>
+  </section>
+</div>
+
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+
+/* S(tier, channel, from, address, subject, body, [linkText, realLink] | null, isPhish, reasons, extras) */
+function S(t,ch,from,addr,subj,body,link,ph,why,x){x=x||{};return {t:t,ch:ch,from:from,addr:addr,subj:subj,body:body,link:link,ph:ph,why:why,att:x.att||null,ctx:x.ctx||null}}
+var SC=[
+/* Level 1: obvious */
+S(0,'email','PlayVault Support','support@playvault-rewards.win','YOU WON 10,000 V-COINS!!!','Congratulations! Click NOW to claim your free coins. This offer ends in 10 minutes!',['playvault.com/claim','http://playvault-rewards.win/claim?id=8841'],1,['The sender domain ends in .win, not the real PlayVault site.','A ticking clock is a classic pressure trick.','Free prizes you never entered for are bait.']),
+S(0,'sms','Unknown number','+44 7700 900123','','Parcelly: your parcel is on hold. Pay a 1.45 GBP redelivery fee now or it will be returned: parcelly-fee.top/pay',['parcelly-fee.top/pay','http://parcelly-fee.top/pay'],1,['Real delivery firms do not text from random mobile numbers.','The link goes to parcelly-fee.top, not the real Parcelly site.','Tiny fees are used to steal card details.']),
+S(0,'dm','xX_free_nitro_Xx','@xX_free_nitro_Xx (new account)','','bro u dropped this. free ChatHub Plus gift just for you',['chathub-gift.ru','http://chathub-gift.ru/login'],1,['Random account, brand new, sending a link to a stranger.','Free gifts that ask you to log in somewhere else steal your login.']),
+S(0,'email','ChatHub Security','admin@chathub-security.co','Your account will be DELETED in 24 hours','Verify your password here immediately or lose your account forever.',['Verify my password','http://chathub-security.co/verify'],1,['Real services never ask you to type your password from an email link.','Threats and deadlines are meant to make you panic.']),
+S(0,'email','Bank of Thamesford','service@bot-account-help.net','Account locked','Dear Customer, your account is locked. Reply with your full card number and PIN to reopen it.',null,1,['Banks never ask for your PIN or full card number.','"Dear Customer" means they do not even know your name.','The address is not the bank\'s real domain.']),
+S(0,'dm','maya_k_2','@maya_k_2 (joined today)','','omg is this you in this video??',['bit.ly/x7Qp2','http://vid-leak-view.xyz/watch'],1,['A shortened link hides where it really goes.','Panic-curiosity bait from a brand new account.']),
+S(0,'email','MyUniPortal','no-reply@myuniportal.ac.uk','Your timetable for next week','Your timetable is now available. Log in at myuniportal.ac.uk as usual to view it.',['myuniportal.ac.uk','https://myuniportal.ac.uk/timetable'],0,['The sender domain matches the real portal.','No pressure and no request for personal details.']),
+S(0,'sms','PARCELLY','PARCELLY','','Your parcel will arrive tomorrow between 10:00 and 14:00. Track it in the Parcelly app.',null,0,['No link and no payment request.','It points you to the app you already have.']),
+S(0,'email','StreamBox','news@streambox.com','New on StreamBox this week','Three new shows land on Friday. See the full list: streambox.com/new',['streambox.com/new','https://streambox.com/new'],0,['The domain matches and the link goes where it says.','Just a newsletter. Nothing is demanded from you.']),
+S(0,'dm','Mum','Saved contact','','Pick up milk on the way home please',null,0,['A saved contact making a normal everyday request.','Nothing to click and nothing to hand over.']),
+S(0,'email','Bank of Thamesford','statements@bankofthamesford.co.uk','Your monthly statement is ready','Log in to the Bank of Thamesford app to view it. We will never ask for your PIN or password by email.',null,0,['It sends you to the app instead of a link.','Matching domain and no request for secrets.']),
+S(0,'app','PlayVault','App notification','','Sam joined your party. Ready when you are.',null,0,['A notification from inside an app you installed, with nothing to click.']),
+
+/* Level 2: tricky */
+S(1,'email','StreamBox Billing','billing@streambox-payments.com','Payment failed: update your card','Your last payment did not go through. Update your details to keep watching.',['streambox.com/billing','https://streambox.com.billing-update.net/login'],1,['The real link ends in billing-update.net. Only the start says streambox.com.','The sender domain, streambox-payments.com, is a lookalike.']),
+S(1,'sms','Unknown number','+44 7700 900456','','Hi, school payments: Year 10 trip money is due today. Pay here: schoolpay-uk.link/y10',['schoolpay-uk.link/y10','http://schoolpay-uk.link/y10'],1,['Schools use their own parent system, not random texts.','Unknown number plus a "due today" deadline.']),
+S(1,'email','PlayVau1t Team','team@playvau1t.com','Unusual login from another country','Someone tried to sign in from Moscow. Secure your account now.',['Secure my account','http://playvau1t.com/secure'],1,['Look closely: the number 1 has replaced the letter l in playvau1t.','Fear of a hacker is used to rush you.']),
+S(1,'dm','Jay','Saved contact (acting oddly)','','hey can u vote for my cousin in a competition? just log in with ur ChatHub so it counts',['vote-for-cousin.live','http://vote-contest.live/chathub-login'],1,['Your friend\'s account may be hacked.','Real votes never need your ChatHub password.']),
+S(1,'email','Recruit Now','ryan.hiring88@gmail.com','Earn 200 GBP a day from your phone','No experience needed. Send a photo of your ID and bank details to start today.',null,1,['Big pay for no skills is too good to be true.','It asks for ID and bank details up front.','A free email address, not a real company.']),
+S(1,'email','Parcelly Accounts','accounts@parcelly-billing.com','Invoice #4471 attached','Please see the attached invoice for your recent order.',null,1,['You did not order anything, so an invoice is suspicious.','A .zip attachment can hide malware.'],{att:'Invoice_4471.zip'}),
+S(1,'email','ChatHub','no-reply@chathub.com','Reset your password','You asked to reset your password. If this was not you, ignore this email.',['Reset password','https://chathub.com/reset?t=9f2a'],0,['You requested it a minute ago, so the timing fits.','Real domain, and the link goes to chathub.com.'],{ctx:'You tapped "Forgot password" one minute ago.'}),
+S(1,'sms','PlayVault','PlayVault','','Your PlayVault code is 482913. Never share it with anyone.',null,0,['A code you asked for, with no link.','It warns you not to share it.'],{ctx:'You are logging in right now.'}),
+S(1,'email','Mr Patel','m.patel@thamesford-school.org.uk','Homework: Chapter 4 questions','Questions are due Friday. The sheet is in Classroom.',['classroom.thamesford-school.org.uk','https://classroom.thamesford-school.org.uk/c/4'],0,['Real school domain from your teacher.','The link goes to the school domain it shows.']),
+S(1,'email','StreamBox','receipts@streambox.com','Your 5.99 GBP payment was received','Thanks for subscribing. View your receipt in your account.',['streambox.com/account','https://streambox.com/account'],0,['You signed up last week, so a receipt is expected.','Matching domain and nothing is demanded.'],{ctx:'You subscribed to StreamBox last week.'}),
+S(1,'dm','Maya','Saved contact','','Sending the group project doc now',['docs.collabdocs.com/d/abc','https://docs.collabdocs.com/d/abc'],0,['A saved contact you were just talking to.','The link matches the document site you both use.'],{ctx:'You were just chatting with Maya about the project.'}),
+S(1,'email','Parcelly','tracking@parcelly.com','Your order has been dispatched','Your parcel from SneakerHub is on its way. Track it: parcelly.com/track/PL88213',['parcelly.com/track/PL88213','https://parcelly.com/track/PL88213'],0,['You ordered trainers on Monday, so this is expected.','The link goes to parcelly.com.'],{ctx:'You ordered trainers from SneakerHub on Monday.'}),
+
+/* Level 3: hard */
+S(2,'email','Mr Patel (Maths)','m.patel@thamesford-schooI.org.uk','Quick favour: exam list','Hi, can you open this form and check your name is spelled right? Need it back today.',['Exam list form','http://thamesford-school-forms.xyz/exam'],1,['The domain has a capital I where a lowercase l should be: schooI.','It feels personal, but the link goes to an unknown site.']),
+S(2,'sms','Bank of Thamesford','BOT-ALERTS','','Did you just spend 249.99 GBP at TechZone? Reply NO or visit bankofthamesford-secure.com/dispute',['bankofthamesford-secure.com/dispute','http://bankofthamesford-secure.com/dispute'],1,['A shock amount is used to make you tap fast.','The link domain is not the bank\'s real one. Open the bank app instead.']),
+S(2,'email','School IT Desk','it-helpdesk@thamesford-school-it.com','School Wi-Fi needs re-verifying','Scan the QR code below with your phone to keep your Wi-Fi access.',['[QR code]','http://school-wifi-verify.xyz/login'],1,['A QR code hides the real link from you.','The sender domain is not the school\'s real one.']),
+S(2,'dm','EsportsScout','@esports_scout_uk','','Our academy found you! Upload a photo of your ID to verify your age and get your scholarship offer',['apply-esports-academy.com','http://apply-esports-academy.com/id'],1,['A stranger asking for a photo of your ID is a red flag.','Flattering offers from people you do not know are bait.']),
+S(2,'sms','ChatHub Support','+44 7700 900789','','Hi, we sent you a code by mistake. Please read it back to us so we can cancel it.',null,1,['Support will never ask you to read out a code.','That code would let them into your account.']),
+S(2,'email','FestivalWin','prizes@festival-win-uk.com','You have won 2 festival tickets','Pay 2.99 GBP postage to claim your free tickets.',['Claim tickets','http://festival-win-uk.com/pay'],1,['A free prize that asks for payment is a card-stealing trick.','You never entered a competition.']),
+S(2,'email','Thamesford Council','library@thamesford.gov.uk','Your library card expires in 14 days','Renew in the library app or visit any branch.',['thamesford.gov.uk/library','https://thamesford.gov.uk/library'],0,['Official gov.uk domain and the link matches.','Calm tone with a choice of ways to renew.']),
+S(2,'sms','Bank of Thamesford','BOT-ALERTS','','A payment of 12.40 GBP to StreamBox was made on card ending 8832. If this was not you, call the number on the back of your card.',null,0,['No link, and it tells you to use the number on your card.','The payment is small and plausible.']),
+S(2,'email','ChatHub','security@chathub.com','New sign-in on iPhone','If this was you, no action is needed. If not, secure your account: chathub.com/security',['chathub.com/security','https://chathub.com/security'],0,['Real domain, and no action is needed if it was you.'],{ctx:'You just signed in on your new phone.'}),
+S(2,'email','PlayVault','legal@playvault.com','We are updating our terms','Changes start on 1 December. No action needed. Read them: playvault.com/terms',['playvault.com/terms','https://playvault.com/terms'],0,['No action, no panic, and the link matches the real domain.']),
+S(2,'dm','Dan','Saved contact','','Join my lobby, code 4421',null,0,['A friend you are playing with. No link and no secrets.'],{ctx:'Dan invited you to a game five minutes ago.'}),
+S(2,'app','Parcelly','App notification','','Your driver is 3 stops away.',null,0,['A notification from the real app you installed.'],{ctx:'You are waiting for a delivery today.'})
+];
+
+var TIERS=[{name:'Level 1 · Rookie',time:10},{name:'Level 2 · Analyst',time:7.5},{name:'Level 3 · Defender',time:6}];
+var PER=8,TOTAL=24,SCANS=3;
+var CH={email:'Email',sms:'SMS',dm:'Direct message',app:'App'};
+var st=null,scr='start',muted=false,last=0,fbTimer=0,audio=null,best=0;
+try{best=+localStorage.getItem('cd-best')||0}catch(e){}
+
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function buildRun(){
+  var out=[];
+  for(var t=0;t<3;t++){
+    var ph=shuffle(SC.filter(function(s){return s.t===t&&s.ph})).slice(0,PER/2);
+    var lg=shuffle(SC.filter(function(s){return s.t===t&&!s.ph})).slice(0,PER/2);
+    out=out.concat(shuffle(ph.concat(lg)));
+  }
+  return out;
+}
+
+function show(name){
+  scr=name;
+  ['start','play','end'].forEach(function(n){$('#s-'+n).hidden=(n!==name)});
+  window.scrollTo(0,0);
+}
+function bestText(){return best?'Best score: '+best:'No score yet. Set the first one.'}
+
+/* sound */
+function tone(f,d,type,v,when){
+  if(muted)return;
+  try{
+    audio=audio||new (window.AudioContext||window.webkitAudioContext)();
+    var t0=audio.currentTime+(when||0),o=audio.createOscillator(),g=audio.createGain();
+    o.type=type||'sine';o.frequency.value=f;
+    g.gain.setValueAtTime(v||0.06,t0);g.gain.exponentialRampToValueAtTime(0.0001,t0+d);
+    o.connect(g);g.connect(audio.destination);o.start(t0);o.stop(t0+d);
+  }catch(e){}
+}
+function sfxOk(){tone(660,.12,'triangle',.07);tone(880,.16,'triangle',.07,.1)}
+function sfxBad(){tone(180,.28,'sawtooth',.06)}
+function sfxScan(){tone(1200,.08,'square',.03)}
+
+/* game flow */
+function cur(){return st.order[st.i]}
+function mult(){return 1+Math.min(4,Math.floor(st.combo/3))}
+
+function start(){
+  clearTimeout(fbTimer);
+  st={order:buildRun(),i:0,score:0,combo:0,bestCombo:0,hp:100,scans:SCANS,right:0,done:0,missed:[],rem:0,limit:0,locked:true,inspected:false};
+  show('play');
+  loadCard();
+}
+
+function loadCard(){
+  var s=cur(),tier=TIERS[s.t];
+  st.limit=tier.time;st.rem=tier.time;st.locked=false;st.inspected=false;
+  $('#fb').innerHTML='';
+  var card=$('#card');
+  card.style.animation='none';void card.offsetWidth;card.style.animation='';
+  var h='<div class="c-head"><span class="chip">'+CH[s.ch]+'</span><span class="c-from">'+esc(s.from)+'</span></div>';
+  h+='<div class="c-addr mono">'+esc(s.addr)+'</div>';
+  if(s.subj)h+='<h3 class="c-subj">'+esc(s.subj)+'</h3>';
+  h+='<p class="c-body">'+esc(s.body)+'</p>';
+  if(s.link)h+='<span class="c-link mono">'+esc(s.link[0])+'</span>';
+  if(s.att)h+='<span class="c-att mono">'+esc(s.att)+'</span>';
+  if(s.ctx)h+='<p class="c-ctx">'+esc(s.ctx)+'</p>';
+  h+='<div class="scan" id="scan" hidden></div>';
+  card.innerHTML=h;
+  var lvl=$('#lvl');
+  if(st.i>0&&st.i%PER===0){lvl.classList.remove('flash');void lvl.offsetWidth;lvl.classList.add('flash')}
+  hud();
+}
+
+function hud(){
+  var s=cur();
+  $('#lvl-name').textContent=TIERS[s.t].name;
+  $('#prog').textContent=(st.i+1)+' / '+TOTAL;
+  var hp=Math.max(0,st.hp);
+  $('#hp-fill').style.width=hp+'%';
+  $('#hp-bar').classList.toggle('low',hp<=40);
+  $('#hp-num').textContent=hp+'%';
+  $('#score').textContent=st.score;
+  $('#streak').textContent='x'+mult();
+  var b=$('#btn-scan');
+  var can=st.scans>0&&!st.inspected&&!st.locked&&(s.link||s.att);
+  b.disabled=!can;
+  b.textContent=(!s.link&&!s.att)?'Nothing to inspect here':'Inspect link ('+st.scans+' left, press I)';
+  $('#btn-block').disabled=st.locked;
+  $('#btn-allow').disabled=st.locked;
+}
+
+function timerUi(){
+  var f=Math.max(0,st.rem/st.limit);
+  $('#timer-fill').style.transform='scaleX('+f+')';
+  $('#timer').classList.toggle('hot',f<.3);
+}
+
+function inspect(){
+  if(!st||scr!=='play'||st.locked||st.inspected||st.scans<=0)return;
+  var s=cur();if(!s.link&&!s.att)return;
+  st.inspected=true;st.scans--;st.rem=Math.max(.5,st.rem-1.5);
+  var h='<div><span>Sender</span>'+esc(s.addr)+'</div>';
+  if(s.link)h+='<div><span>Link really opens</span>'+esc(s.link[1])+'</div>';
+  if(s.att)h+='<div><span>File</span>'+esc(s.att)+' is a compressed archive. It can hide a program.</div>';
+  var el=$('#scan');el.innerHTML=h;el.hidden=false;
+  sfxScan();hud();timerUi();
+}
+
+function answer(choice){
+  if(!st||scr!=='play'||st.locked)return;
+  st.locked=true;st.done++;
+  var s=cur(),ok=false,head,pts='';
+  if(choice!==null)ok=((choice==='block')===!!s.ph);
+  if(ok){
+    st.combo++;st.bestCombo=Math.max(st.bestCombo,st.combo);
+    var p=100*mult()+Math.round(st.rem*5);
+    st.score+=p;st.right++;st.hp=Math.min(100,st.hp+3);
+    head=s.ph?'Threat blocked':'Safe message allowed';
+    pts='+'+p+' points';sfxOk();
+  }else{
+    st.combo=0;st.missed.push(s);
+    if(choice===null){st.hp-=15;head='Too slow';pts='-15% integrity'}
+    else if(s.ph){st.hp-=25;head='Breach! That was phishing';pts='-25% integrity'}
+    else{st.hp-=15;head='That was a real message';pts='-15% integrity'}
+    sfxBad();
+  }
+  var last=(st.hp<=0||st.i+1>=TOTAL);
+  var fb='<div class="fb '+(ok?'ok':'bad')+'"><h2>'+head+'</h2><div class="pts">'+pts+'</div><ul>'+s.why.map(function(w){return '<li>'+esc(w)+'</li>'}).join('')+'</ul><button class="go" id="next" type="button">'+(last?'See results':'Next message')+'</button></div>';
+  $('#fb').innerHTML=fb;
+  $('#next').addEventListener('click',next);
+  hud();timerUi();
+  if(ok&&!last)fbTimer=setTimeout(next,2800);
+}
+
+function next(){
+  clearTimeout(fbTimer);
+  if(!st||scr!=='play'||!$('#next'))return;
+  if(st.hp<=0||st.i+1>=TOTAL){finish();return}
+  st.i++;loadCard();timerUi();
+}
+
+function finish(){
+  var acc=st.done?Math.round(st.right/st.done*100):0;
+  var survived=st.hp>0&&st.done>=TOTAL;
+  var rank,msg;
+  if(survived&&acc>=90){rank='Cyber Ace';msg='Almost nothing got past you. Check the sender, check the link, never share codes. You already do.'}
+  else if(acc>=75){rank='Defender';msg='Strong shift. A few tricky ones slipped through, so review them below.'}
+  else if(acc>=50){rank='Analyst';msg='You catch the obvious scams. Practise reading domains letter by letter and using Inspect.'}
+  else{rank='Rookie';msg='Every defender starts here. Read the reasons after each message, then run another shift.'}
+  if(st.score>best){best=st.score;try{localStorage.setItem('cd-best',String(best))}catch(e){}}
+  $('#end-eyebrow').textContent=st.hp<=0?'System compromised':(survived?'Shift complete':'Shift over');
+  $('#rank').textContent=rank;
+  $('#rank-msg').textContent=msg;
+  $('#e-score').textContent=st.score;
+  $('#e-acc').textContent=acc+'%';
+  $('#e-streak').textContent=st.bestCombo;
+  $('#e-done').textContent=st.done+' / '+TOTAL;
+  var m=$('#missed');
+  if(st.missed.length){
+    m.innerHTML='<h3>What got you</h3><ul>'+st.missed.slice(0,6).map(function(s){
+      return '<li><b>'+esc(s.subj||s.body.slice(0,60))+'</b>'+(s.ph?'Phishing. ':'Real message. ')+'<span>'+esc(s.why[0])+'</span></li>';
+    }).join('')+'</ul>';
+  }else m.innerHTML='';
+  $('#best2').textContent=bestText();
+  show('end');
+}
+
+/* swipe */
+var drag=null,card=$('#card');
+card.addEventListener('pointerdown',function(e){
+  if(!st||scr!=='play'||st.locked||e.target.closest('button'))return;
+  drag={x:e.clientX};try{card.setPointerCapture(e.pointerId)}catch(x){}
+  card.classList.add('dragging');
+});
+card.addEventListener('pointermove',function(e){
+  if(!drag)return;var dx=e.clientX-drag.x;
+  card.style.transform='translateX('+dx+'px) rotate('+(dx/20)+'deg)';
+  card.dataset.lean=dx>35?'allow':(dx<-35?'block':'');
+});
+function endDrag(e){
+  if(!drag)return;var dx=e.clientX-drag.x;drag=null;
+  card.classList.remove('dragging');card.style.transform='';card.dataset.lean='';
+  if(dx>90)answer('allow');else if(dx<-90)answer('block');
+}
+card.addEventListener('pointerup',endDrag);
+card.addEventListener('pointercancel',endDrag);
+
+/* controls */
+$('#start').addEventListener('click',start);
+$('#again').addEventListener('click',start);
+$('#btn-block').addEventListener('click',function(){answer('block')});
+$('#btn-allow').addEventListener('click',function(){answer('allow')});
+$('#btn-scan').addEventListener('click',inspect);
+$('#mute').addEventListener('click',function(){muted=!muted;this.textContent=muted?'Sound off':'Sound on'});
+document.addEventListener('keydown',function(e){
+  var k=e.key.toLowerCase();
+  if(k==='enter'||k===' '){
+    if(e.target.closest&&e.target.closest('button'))return;
+    e.preventDefault();
+    if(scr==='start'||scr==='end')start();else if(scr==='play'&&$('#next'))next();
+    return;
+  }
+  if(scr!=='play')return;
+  if(k==='arrowleft'||k==='a'){e.preventDefault();answer('block')}
+  else if(k==='arrowright'||k==='d'){e.preventDefault();answer('allow')}
+  else if(k==='i'){inspect()}
+});
+
+/* clock */
+function tick(t){
+  requestAnimationFrame(tick);
+  var dt=Math.min(.1,(t-last)/1000);last=t;
+  if(!st||scr!=='play'||st.locked)return;
+  st.rem-=dt;timerUi();
+  if(st.rem<=0){st.rem=0;answer(null)}
+}
+requestAnimationFrame(tick);
+
+$('#best').textContent=bestText();
+})();
+</script>
+</body>
+</html>
